@@ -4,6 +4,7 @@ import asyncio
 import logging
 import config
 from keep_alive import keep_alive
+from utils.task_scheduler import TaskScheduler
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -35,6 +36,11 @@ async def on_ready():
     logger.info(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
     logger.info('------')
 
+    # Initialize task scheduler (load announcements and start scheduling)
+    if hasattr(bot, 'scheduler') and not bot.scheduler.scheduler.running:
+        await bot.scheduler.initialize()
+        logger.info('Task scheduler initialized')
+
     # Sync slash commands with the guild
     try:
         guild = discord.Object(id=bot_config['guild_id'])
@@ -57,6 +63,7 @@ async def load_extensions():
     """Load all cogs."""
     cogs = [
         'cogs.basic',
+        'cogs.scheduler',
     ]
 
     for cog in cogs:
@@ -72,6 +79,10 @@ async def main():
     # Start Flask keep-alive server for Repl.it
     keep_alive()
     logger.info('Keep-alive server started on port 8080')
+
+    # Initialize scheduler before loading extensions
+    bot.scheduler = TaskScheduler(bot)
+    logger.info('Task scheduler created')
 
     # Load extensions
     await load_extensions()
